@@ -29,7 +29,7 @@ class ServiceProvider:
 
         # check if function: is in allowed actions, exists and is callable
         func = getattr(self, action_name, None)
-        if (action_name not in self.allowed_actions) or (not func) or (not callable(func)):
+        if not (action_name not in self.allowed_actions) or (not func) or (not callable(func)):
             raise ModuleNotFoundError(f"Action {action_name} does not exist for this service provider")
 
         # we only accept dicts as a return value, because we serialize everything to JSON afterwards on endpoint side

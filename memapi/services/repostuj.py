@@ -66,7 +66,9 @@ class Repostuj(ServiceProvider):
             current = self._parse_html(response)
 
             # if last element's title is same as current one it means, that we hit the last one - break
-            if elements and (elements[-1].title == current.title and elements[-1] == current.cid):
+            if elements and (
+                elements[-1].get("title") == current.get("title") and elements[-1] == current.get("item_id")
+            ):
                 log.debug(f"Found {len(elements)} for required {per_page}, returning results")
                 break
 
@@ -95,43 +97,48 @@ class Repostuj(ServiceProvider):
 
     def _get_id(self, page: HTMLResponse) -> str:
         """ get item id """
-        return os.path.basename(os.path.splitext(self._get_url(page))[0])
+        return page.find("#commentBox", first=True).attrs.get("data-slug")
 
     def _get_title(self, page: HTMLResponse) -> str:
         """ get item title """
-        return page.find('span.title', first=True).text.split(' | ')[1]
+        return page.find("span.title", first=True).text.split(" | ")[1]
 
     def _get_score(self, page: HTMLResponse):
         """ get item rating """
-        return page.find('span.vote-count').attrs.get('data')
+        return page.find("span.vote-count", first=True).attrs.get("data")
 
     def _get_content(self, page: HTMLResponse) -> (str, None):
         """ get contents: videos, images, etc """
-        images = page.find('div.img-block img.img-fluid')
-        videos = page.find('div.vid-block source')
+        images = page.find("div.img-block img.img-fluid")
+        videos = page.find("div.vid-block source")
         items = []
 
         # grab all the images
         if images:
             for i in images:
                 log.debug(f"Found image {i.attrs.get('src')} for {page.url}")
-                items.append(f"https://repostuj.pl/{i.attrs.get('src')}")
+                items.append(f"https://repostuj.pl{i.attrs.get('src')}")
 
         # grab all the videos
         if videos:
             for v in videos:
-                source_tag = [e for e in filter(lambda el: el.attrs.get('type') == "video/mp4", v)]
+                source_tag = [
+                    e
+                    for e in filter(
+                        lambda el: el.attrs.get("type") == "video/mp4", [v] if not isinstance(v, list) else v
+                    )
+                ]
                 if len(source_tag):
                     source_tag = source_tag[0]
                     log.debug(f"Found video {source_tag.attrs.get('src')} for {page.url}")
-                    items.append(f"https://repostuj.pl/{source_tag.attrs.get('src')}")
+                    items.append(f"https://repostuj.pl{source_tag.attrs.get('src')}")
 
         return items
 
-    def _get_url(self, resp: Response) -> str:
+    def _get_url(self, page: HTMLResponse) -> str:
         """ get current url """
-        return resp.url
+        return page.find("meta[property='og:url']", first=True).attrs.get("content")
 
     def _get_next_url(self, page: HTMLResponse) -> str:
         """ get next page's url """
-        return f"{self.PROVIDER_URL}{page.find('#post-prev-btn', first=True).attrs.get('href')}"
+        return f"https://repostuj.pl{page.find('#post-prev-btn', first=True).attrs.get('href')}"
