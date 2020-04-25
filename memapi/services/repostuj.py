@@ -44,6 +44,10 @@ class Repostuj(ServiceProvider):
         pass
 
     def _grab_paginated(self, starting_url: str, page: int, per_page: int) -> list:
+        # change type of params
+        per_page = int(per_page) if isinstance(per_page, str) else per_page
+        page = int(page) if isinstance(page, str) else page
+
         url = f"https://repostuj.pl/{starting_url}"
         elements = []
         start_returning_from = (page - 1) * per_page
