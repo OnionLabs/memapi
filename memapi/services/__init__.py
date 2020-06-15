@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import List
 
 from memapi.utils import get_allowed_args
@@ -51,13 +52,18 @@ class DynamicPagination:
         items_count: int = None,
         **kwargs,
     ) -> None:
-        self.starting_index = starting_index or kwargs.get("starting_index") or 1
         self.per_page = per_page or kwargs.get("per_page") or 25
+
+        if kwargs.get("page"):
+            self.starting_index = ((kwargs.get("page") - 1) * self.per_page) + 1
+        else:
+            self.starting_index = starting_index or kwargs.get("starting_index") or 1
+
         self.items_count = items_count
 
     @property
     def current_page(self) -> int:
-        return int(self.starting_index / self.per_page)
+        return math.ceil(int(self.starting_index / self.per_page))
 
     @property
     def previous_index(self) -> (int, None):
@@ -179,9 +185,9 @@ class Item:
             "title": self.title,
             "description": self.description,
             "score": self.score,
-            "content": [c.as_dict for c in self.content],
+            "content": [c.as_dict for c in self.content] if self.content else None,
             "url": self.url,
-            "comments": [c.as_dict for c in self.comments],
+            "comments": [c.as_dict for c in self.comments] if self.comments else None,
         }
 
 
@@ -222,9 +228,9 @@ class ServiceProvider:
     def allowed_actions(self) -> list:
         """ Allowed actions for ServiceProvider """
         actions = []
-        for name in self.__dict__:
+        for name in dir(self):
             if "action_" in name and callable(getattr(self, name)):
-                actions.append(name)
+                actions.append(name.replace("action_", ""))
 
         return actions
 

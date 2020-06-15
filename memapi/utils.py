@@ -1,30 +1,34 @@
 import importlib
 import inspect
 import logging
+from typing import List
 
 log = logging.getLogger("memapi")
 
 
-def get_allowed_args(func: callable) -> list:
+def get_allowed_args(func: callable) -> dict:
     """
-    Returns allowed arguments for given callable
+    Returns allowed arguments, and their suggested types for given callable
     :param func: given callable
-    :return: allowed arguments list
+    :return: allowed arguments
     """
-    allowed_args = list()
-    [allowed_args.append(i) for i in inspect.getargs(func.__code__).args or []]
-    [allowed_args.append(i) for i in inspect.getargs(func.__code__).varargs or []]
+    allowed_args = dict()
+    typemap = {
+        dict: "object",
+        int: "integer",
+        str: "string",
+        float: "float",
+        bool: "boolean",
+    }
 
-    # remove self because we're not using it here
-    allowed_args.remove("self")
-
-    # remove doubled items if any
-    allowed_args = list(set(allowed_args))
+    sig = inspect.signature(func)
+    for param in sig.parameters.values():
+        allowed_args[param.name] = typemap.get(param.annotation) or "object"
 
     return allowed_args
 
 
-def get_classes_for_path(path: str, allowed_type: type) -> list:
+def get_classes_for_path(path: str, allowed_type: type) -> List[callable]:
     """
     Dynamically searches for classes on specified python (dot-separated) paths, only for classes of specified type
 
