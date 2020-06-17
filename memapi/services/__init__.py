@@ -2,8 +2,6 @@ import logging
 import math
 from typing import List
 
-from memapi.utils import get_allowed_args
-
 log = logging.getLogger(__name__)
 
 
@@ -94,15 +92,15 @@ class DynamicPagination:
 
 class ServiceResult:
     def __init__(
-        self, result: list, pagination: (StaticPagination, DynamicPagination)
+        self, results: list, pagination: (StaticPagination, DynamicPagination)
     ) -> None:
-        self.result = result
+        self.results = results
         self.pagination = pagination
 
     @property
     def as_dict(self) -> dict:
         return {
-            "result": [i.as_dict for i in self.result],
+            "results": [i.as_dict for i in self.results],
             "pagination": self.pagination.as_dict,
         }
 
@@ -192,8 +190,8 @@ class Item:
 
 
 class ServiceProvider:
-    def __init__(self):
-        pass
+    def __init__(self, config: dict):
+        self.config = config
 
     @property
     def service_name(self) -> str:
@@ -219,60 +217,7 @@ class ServiceProvider:
     def max_score(self) -> (int, float, None):
         """
             Set max score for service provider.
-            If platform supports star-based rating, e.g. 6.5/10, set this to it's maximum.
+            If platform supports star-based rating, e.g. 6.5/10, set this to its maximum.
             Otherwise, if platform doesn't have maximum score - set to None (default)
         """
         return None
-
-    @property
-    def allowed_actions(self) -> list:
-        """ Allowed actions for ServiceProvider """
-        actions = []
-        for name in dir(self):
-            if "action_" in name and callable(getattr(self, name)):
-                actions.append(name.replace("action_", ""))
-
-        return actions
-
-    def action(self, action_name: str, **kwargs: dict) -> ServiceResult:
-        """
-        Action handler. We pass here every action, make checks and then grab result from requested action.
-
-        :param action_name: Action name to redirect to. Action function should be named in convention `action_{name}`
-        :param kwargs: Kwargs
-        :return: Dict with the response.
-        """
-        log.info(f"Called action {action_name} on {self.service_name} service provider")
-
-        action_name = f"action_{action_name}"
-
-        # check if function: is in allowed actions, exists and is callable
-        func = getattr(self, action_name, None)
-        if (
-            not (action_name not in self.allowed_actions)
-            or (not func)
-            or (not callable(func))
-        ):
-            raise ErrorResult(
-                code="WRONG-ACTION",
-                message=f"Action {action_name} does not exist for this service provider",
-            )
-
-        # check if params forwarded to the function are allowed
-        allowed_args = get_allowed_args(func)
-        for arg in kwargs:
-            if arg not in allowed_args:
-                raise ErrorResult(
-                    code="FORBIDDEN-ARG", message=f"Forbidden argument {arg}"
-                )
-
-        # return
-        # we only accept ServiceResults instances as a fuction's return value
-        result = func(**kwargs)
-        if not isinstance(result, ServiceResult):
-            raise TypeError(
-                f"Action result is not in required type. Expected ServiceResult, got {str(type(result))}"
-            )
-
-        # we return ServiceProvider instance in here
-        return result

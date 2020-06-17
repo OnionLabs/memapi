@@ -4,21 +4,21 @@ import os
 from requests import Response
 from requests_html import HTMLSession, HTMLResponse
 
-from memapi import ServiceProvider
 from memapi.services import (
     StaticPagination,
     DynamicPagination,
     ServiceResult,
     Item,
     ItemContent,
+    ServiceProvider,
 )
 
 log = logging.getLogger(__name__)
 
 
 class Repostuj(ServiceProvider):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config: dict):
+        super().__init__(config)
         self.session: HTMLSession = HTMLSession()
 
     @property
@@ -67,7 +67,7 @@ class Repostuj(ServiceProvider):
         current = self._parse_html(response)
 
         return ServiceResult(
-            result=[current],
+            results=[current],
             pagination=DynamicPagination(starting_index=1, per_page=1, items_count=1),
         )
 
@@ -116,7 +116,7 @@ class Repostuj(ServiceProvider):
 
         log.debug(f"Found total of {len(elements)} elements")
         return ServiceResult(
-            result=elements,
+            results=elements,
             pagination=DynamicPagination(
                 starting_index=start_returning_from,
                 per_page=pagination.per_page,
